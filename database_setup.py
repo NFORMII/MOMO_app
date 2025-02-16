@@ -1,26 +1,27 @@
 import sqlite3
 
-# Connect to SQLite database (creates 'momo_data.db' if not found)
-conn = sqlite3.connect("momo_data.db")
-cursor = conn.cursor()
+# Connect to SQLite database (or create it if it doesn't exist)
+connection = sqlite3.connect('momo_data.db')
+cursor = connection.cursor()
 
-# Create the transactions table
-cursor.execute("""
+# Drop the table if it exists (to avoid conflicts)
+cursor.execute('DROP TABLE IF EXISTS transactions')
+
+# Create table for transactions
+cursor.execute('''
     CREATE TABLE IF NOT EXISTS transactions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        transaction_type TEXT NOT NULL,
-        amount INTEGER NOT NULL,
+        date TEXT,
         sender TEXT,
         receiver TEXT,
-        date_time TEXT NOT NULL,
-        transaction_id TEXT UNIQUE,
-        details TEXT
+        amount REAL,
+        currency TEXT,
+        transaction_type TEXT
     )
-""")
+''')
 
-# Commit changes and close connection
-conn.commit()
-conn.close()
+# Commit and close connection
+connection.commit()
+connection.close()
 
 print("Database and table created successfully!")
-

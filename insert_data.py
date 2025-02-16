@@ -11,5 +11,5 @@ def insert_transaction(transaction_type, amount, sender, receiver, transaction_i
     conn.close()
 
 # Example data insertion
-insert_transaction("Incoming Money", 5000, "John Doe", "You", "123456", "2024-01-01 10:00:00", "MTN MoMo")
-print("Sample transaction inserted successfully!")
+insert_transaction("Incoming Money", 5000, "modestine", "You", "123456", "2024-01-01 10:00:00", "MTN MoMo")
+print("test transaction entered successfully!")

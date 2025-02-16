@@ -57,7 +57,7 @@ def parse_xml(file_path):
     
     return transactions
 
-# Function to insert transactions into the database
+# Function to insert transactions into  database
 def insert_into_db(transactions):
     conn = sqlite3.connect('momo_data.db')
     cursor = conn.cursor()
@@ -89,7 +89,7 @@ def insert_into_db(transactions):
 
 # Main function
 def main():
-    transactions = parse_xml("momo_sms.xml")  # Ensure momo_sms.xml is in your project folder
+    transactions = parse_xml("momo_sms.xml")  # to ensure that the momo_sms.xml is in my project folder
     insert_into_db(transactions)
     print("Data successfully processed and inserted into the database.")
 
