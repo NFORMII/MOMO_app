@@ -21,6 +21,7 @@ For instance: Bank transfers, Payments, Withdrawals, Incoming money, ...
 - **Backend:** Python (Flask)
 - **Database:** SQLite
 - **Data Source:** XML File
+
 ## How We Built It
 1. **Data Extraction & Cleaning** 
 
