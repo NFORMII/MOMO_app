@@ -1,21 +1,36 @@
-# MTN MoMo SMS Data Processor & Dashboard
+# MTN MoMo SMS Data Processor & Dashboard  
 
-Our project automates data extraction, categorization, and visualization, helping users track financial trends, analyze transactions, and gain meaningful insights from MTN MoMo messages of the transactions carried out.
+## Overview  
+This project automates the extraction, categorization, and visualization of MTN MoMo transaction messages. It enables users to track financial trends, analyze transactions, and gain valuable insights into their financial activities.  
 
-For instance: Bank transfers, Payments, Withdrawals, Incoming money, ...
+## Key Features  
+- **Automated Data Processing** – Extracts and categorizes SMS-based financial transactions.  
+- **Comprehensive Transaction Tracking** – Includes deposits, withdrawals, payments, bank transfers, and more.  
+- **Interactive Dashboard** – Displays key insights through visual reports, charts, and tables.  
+- **Search and Filter Functionality** – Allows users to explore financial data with advanced filtering options.  
+- **Transaction Analytics** – Provides summaries, trends, and transaction volume analysis.  
 
-## Dashboard features
-1.  Transaction Tracking
-2. Analysed transaction data 
-3. Friendly interface
-4. Transactions filter & Search
+## Dashboard Features  
+The web-based dashboard provides an interface for visualizing and interacting with transaction data. It includes:  
 
-## Team
+- **Dashboard Overview** – Displays total transactions, total amount processed, and active users.  
+- **Transaction Trends** – Line graph showing transaction volume over time.  
+- **Transaction Types Analysis** – Bar chart displaying the distribution of transaction types.  
+- **Recent Transactions Table** – A searchable and sortable table listing the latest transactions with details.  
+- **Customizable Timeframes** – Users can view analytics for different time periods such as weekly or monthly.  
 
-**David Muotoh-Francis** - Front end
+## Tech Stack  
+| Component  | Technology Used  |  
+|------------|-----------------|  
+| **Frontend**  | HTML, CSS, JavaScript  |  
+| **Backend**  | Python (Flask)  |  
+| **Database**  | SQLite  |  
+| **Data Source**  | XML File (MTN MoMo SMS Messages)  |  
+| **Charts and Graphs**  | Chart.js (for visualizations)  |  
 
-**Nformi & Josue** - Data handling & Back end 
+## Implementation Details  
 
+<<<<<<< HEAD
 ## Tech Stack
 - **Frontend:** HTML, CSS, JavaScript
 - **Backend:** Python (Flask)
@@ -24,42 +39,44 @@ For instance: Bank transfers, Payments, Withdrawals, Incoming money, ...
 
 ## How We Built It
 1. **Data Extraction & Cleaning** 
+=======
+### 1. Data Extraction and Cleaning  
+- **XML Parsing** – Converts raw SMS messages into structured data.  
+- **Data Categorization** – Classifies transactions into predefined types such as deposits, withdrawals, and payments.  
+- **Error Handling and Logging** – Tracks unprocessed or malformed messages for further review.  
+>>>>>>> c3adfe007cf7e8eca7513fb7791354a4c65d4792
 
-    XML Parsing: Converted raw SMS messages into structured data.
+### 2. Backend and Database Engineering  
+- **Flask-powered API** – Facilitates communication between the frontend and database.  
+- **SQLite Relational Database** – Stores structured transaction records efficiently.  
+- **Optimized Query Handling** – Enables fast data retrieval and filtering.  
 
-    Data Categorization: Classified transactions into types like payments, deposits, withdrawals, and airtime purchases.
+### 3. Interactive Dashboard Development  
+- **Built with HTML, CSS, and JavaScript** – Provides a responsive user interface.  
+- **Dynamic Charts and Reports** – Visualizes transaction trends and insights.  
+- **Search and Filter Functionalities** – Allows users to navigate and analyze transactions efficiently.  
 
-    Error Handling & Logging: Tracked ignored or malformed messages for review.
+## Setup and Installation  
 
-2. **Backend & Database Engineering**
-    Flask-powered API for smooth communication between frontend and database.
+### Clone the Repository  
+```bash
+git clone https://github.com/NFORMII/MOMO_app.git
+Run the Backend Server
+bash
+Copy
+Edit
+cd MOMO_app
+python app.py
+Launch the Frontend
+Open index.html in a web browser.
 
-    SQLite relational database to store structured transaction records.
-    Optimized query handling for fast data retrieval and filtering.
+Lessons Learned
+This project involved working with financial data, backend processing, and frontend visualization. The main challenges included:
 
-3. **Interactive Dashboard**
+Designing a scalable and efficient full-stack architecture.
+Implementing data cleaning and categorization techniques.
+Optimizing database queries for real-time transaction retrieval.
 
-    Built with HTML, CSS, and JavaScript for a seamless user experience.
-
-    Dynamic charts & reports for transaction analysis.
-
-    Search & filter functionality to easily explore financial data.
-
-
-## Get Started with our Dashboard 
-
-Clone the repository:
-
-git clone <https://github.com/NFORMII/MOMO_app.git>
-
-
-Run python app.py
-
-**Launch Frontend**: Open index.html in a browser.
-
-Now you can enjoy using MoMo Dashboard 
-
-## Lessons Learned
-
-This project pushed us beyond just coding, it was an opportunity to turn complexity into clarity, data into insights, and ideas into reality.
-It challenged us to think critically, collaborate effectively, and engineer a real-world solution for financial data analysis.
+Team Members
+David Muotoh-Francis – Frontend Development
+Nformi & Josue – Backend and Data Processing
