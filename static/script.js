@@ -1,25 +1,18 @@
 document.addEventListener("DOMContentLoaded", () => {
-    // Initialize elements
-    const totalTransactionsEl = document.querySelector("#total-transactions .number");
-    const totalAmountEl = document.querySelector("#total-amount .number");
-    const activeUsersEl = document.querySelector("#active-users .number");
-    const avgTransactionEl = document.querySelector("#average-transaction .number");
-    const transactionTypeChart = document.getElementById("transactionTypeChart");
-    const transactionTrendChart = document.getElementById("transactionTrendChart");
+    const fromDateEl = document.getElementById("from-date");
+    const toDateEl = document.getElementById("to-date");
+    const transactionTypeEl = document.getElementById("transaction-type");
+    const transactionTypeChartEl = document.getElementById("transactionTypeChart");
     const recentTransactionsBody = document.getElementById("recent-transactions-body");
-    const refreshBtn = document.getElementById("refresh-btn");
-    const dateRangeSelect = document.getElementById("date-range");
-    const trendPeriodSelect = document.getElementById("trend-period");
+    const allTransactionsBody = document.getElementById("transaction-table-body");
     const chartControlButtons = document.querySelectorAll(".chart-controls button");
+    const applyBtn = document.getElementById("apply-filters");
+    const clearBtn = document.getElementById("clear-filters");
 
-    // Chart instances
-    let typeChart;
-    let trendChart;
+    let typeChartInstance = null;
 
-    // Color palette for charts
-    const chartColors = ["#f9ca24", "#f0932b", "#ffbe76", "#f6e58d", "#c7ecee"];
+    const chartColors = ["#f9ca24", "#f0932b", "#ffbe76", "#f6e58d", "#c7ecee", "#7ed6df", "#e056fd", "#686de0"];
 
-    // Format currency
     function formatCurrency(amount) {
         return new Intl.NumberFormat('rw-RW', {
             style: 'currency',
@@ -28,131 +21,124 @@ document.addEventListener("DOMContentLoaded", () => {
         }).format(amount);
     }
 
-    // Load dashboard data from API
     async function loadDashboardData() {
-        // Show loading state
-        setLoadingState(true);
+        const fromDate = fromDateEl.value;
+        const toDate = toDateEl.value;
+        const transactionType = transactionTypeEl.value;
+
+        let url = '/api/dashboard-data?';
+        if (fromDate) url += `from_date=${fromDate}&`;
+        if (toDate) url += `to_date=${toDate}&`;
+        if (transactionType && transactionType !== 'All') url += `transaction_type=${transactionType}&`;
 
         try {
-            const response = await fetch('http://localhost:5000/api/dashboard-data');
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
             const data = await response.json();
-            updateDashboard(data);
+
+            updateTransactionTable(data.recentTransactions);
+            updateTransactionTypeChart(data.typeDistribution);
         } catch (error) {
             console.error('Error loading dashboard data:', error);
-            showError('Failed to load dashboard data');
-        } finally {
-            setLoadingState(false);
         }
-    }
-
-    function setLoadingState(isLoading) {
-        if (isLoading) {
-            totalTransactionsEl.textContent = "Loading...";
-            totalAmountEl.textContent = "Loading...";
-            activeUsersEl.textContent = "Loading...";
-            avgTransactionEl.textContent = "Loading...";
-        }
-    }
-
-    function updateDashboard(data) {
-        // Update metrics
-        totalTransactionsEl.textContent = new Intl.NumberFormat().format(data.totalTransactions);
-        totalAmountEl.textContent = formatCurrency(data.totalAmount);
-        
-        // Calculate average transaction
-        const avgTransaction = data.totalTransactions > 0 ? 
-            data.totalAmount / data.totalTransactions : 0;
-        avgTransactionEl.textContent = formatCurrency(avgTransaction);
-
-        // Update active users (if provided by API)
-        if (data.activeUsers) {
-            activeUsersEl.textContent = new Intl.NumberFormat().format(data.activeUsers);
-        }
-
-        // Update charts
-        updateCharts(data);
-        
-        // Update recent transactions
-        updateTransactionTable(data.recentTransactions);
-
-        // Update trends
-        updateTrends(data);
-    }
-
-    function updateCharts(data) {
-        // Update Transaction Types Chart
-        const typeData = {
-            labels: Object.keys(data.typeDistribution),
-            datasets: [{
-                label: "Transaction Count",
-                data: Object.values(data.typeDistribution),
-                backgroundColor: chartColors,
-                borderWidth: 1
-            }]
-        };
-
-        if (typeChart) {
-            typeChart.destroy();
-        }
-
-        typeChart = new Chart(transactionTypeChart.getContext("2d"), {
-            type: "bar",
-            data: typeData,
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: "bottom"
-                    }
-                }
-            }
-        });
     }
 
     function updateTransactionTable(transactions) {
         if (!transactions || transactions.length === 0) {
-            recentTransactionsBody.innerHTML = '<tr><td colspan="5">No recent transactions</td></tr>';
+            recentTransactionsBody.innerHTML = '<tr><td colspan="5" class="loading-cell">No transactions found</td></tr>';
             return;
         }
 
-        const tableHTML = transactions.map(tx => `
+        const rows = transactions.map(tx => `
             <tr>
-                <td>${tx.id || 'N/A'}</td>
+                <!--<td>${tx.id || 'N/A'}</td>
                 <td>${tx.recipient || 'N/A'}</td>
                 <td>${tx.type}</td>
                 <td>${formatCurrency(tx.amount)}</td>
-                <td><span class="status status-${tx.status || 'completed'}">${tx.status || 'completed'}</span></td>
+                <td><span class="status status-completed">Completed</span></td>-->
+                <td>${tx.transaction_id}</td>
+                <td>${tx.date}</td>
+                <!--<td>${tx.sender}</td>-->
+                <!--<td>${tx.recipient}</td>-->
+                <td>${tx.type}</td>
+                <td>${formatCurrency(tx.amount)}</td>
+                <td>${formatCurrency(tx.fee)}</td>
             </tr>
         `).join('');
-        
-        recentTransactionsBody.innerHTML = tableHTML;
+
+        recentTransactionsBody.innerHTML = rows;
     }
 
-    function updateTrends(data) {
-        // Update trend indicators
-        document.querySelectorAll(".trend").forEach(trend => {
-            const valueEl = trend.querySelector("span");
-            const value = parseFloat(valueEl.textContent);
-            
-            if (value < 0) {
-                trend.classList.remove("positive");
-                trend.classList.add("negative");
-                trend.querySelector("i").className = "fas fa-arrow-down";
-            } else {
-                trend.classList.remove("negative");
-                trend.classList.add("positive");
-                trend.querySelector("i").className = "fas fa-arrow-up";
-            }
+    function updateTransactionTypeChart(typeDistribution) {
+        const labels = Object.keys(typeDistribution);
+        const values = Object.values(typeDistribution);
+
+        if (typeChartInstance) {
+            typeChartInstance.destroy();
+        }
+
+        const chartType = document.querySelector(".chart-controls button.active").dataset.type;
+
+        typeChartInstance = new Chart(transactionTypeChartEl.getContext("2d"), {
+            type: chartType,
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: "Number of Transactions",
+                    data: values,
+                    backgroundColor: chartColors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                aspectRatio: 1,
+                plugins: {
+                    legend: {
+                        position: "right"
+                    },
+                    datalabels: {
+                        color: '#000',
+                        font:{
+                            weight: 'bold'
+                        },
+                        anchor: chartType === 'pie' ? 'center' : 'end',
+                        align: chartType === 'pie' ? 'center' : 'end',
+                        offset: chartType === 'pie' ? 0 : 4,
+                        formatter: (value) => value
+                    }
+                }
+            },
+            plugins: [ChartDataLabels]
         });
     }
 
-    function showError(message) {
-        // You could implement a toast notification here
-        console.error(message);
+    async function loadAllTransactions() {
+        try {
+            const response = await fetch("/transactions");
+            const data = await response.json();
+
+            if (!data.length) {
+                allTransactionsBody.innerHTML = '<tr><td colspan="6" class="loading-cell">No transactions found</td></tr>';
+                return;
+            }
+
+            allTransactionsBody.innerHTML = data.map(tx => `
+                <tr>
+                    <td>${tx.transaction_id}</td>
+                    <td>${tx.date}</td>
+                    <!--<td>${tx.sender}</td>-->
+                    <!--<td>${tx.recipient}</td>-->
+                    <td>${tx.type}</td>
+                    <td>${formatCurrency(tx.amount)}</td>
+                    <td>${formatCurrency(tx.fee)}</td>
+                    
+                </tr>
+            `).join("");
+        } catch (error) {
+            console.error("Error loading all transactions:", error);
+        }
     }
 
     // Event Listeners
@@ -160,32 +146,24 @@ document.addEventListener("DOMContentLoaded", () => {
         button.addEventListener("click", () => {
             chartControlButtons.forEach(btn => btn.classList.remove("active"));
             button.classList.add("active");
-            
-            if (typeChart) {
-                const newType = button.dataset.type;
-                const currentData = typeChart.data;
-                typeChart.destroy();
-                
-                typeChart = new Chart(transactionTypeChart.getContext("2d"), {
-                    type: newType,
-                    data: currentData,
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            legend: {
-                                position: "bottom"
-                            }
-                        }
-                    }
-                });
-            }
+            loadDashboardData();
         });
     });
+    
+    applyBtn.addEventListener("click", loadDashboardData);
 
-    dateRangeSelect.addEventListener("change", loadDashboardData);
-    refreshBtn.addEventListener("click", loadDashboardData);
-    trendPeriodSelect.addEventListener("change", loadDashboardData);
+    clearBtn.addEventListener("click", () => {
+        fromDateEl.value = '';
+        toDateEl.value = '';
+        transactionTypeEl.value = 'All';
+        loadDashboardData();
+    });
+    // For automatic filtering
+    // fromDateEl.addEventListener("change", loadDashboardData);
+    // toDateEl.addEventListener("change", loadDashboardData);
+    // transactionTypeEl.addEventListener("change", loadDashboardData);
 
-    // Initial load
+    // Initial Load
     loadDashboardData();
+    loadAllTransactions();
 });

@@ -1,165 +1,179 @@
 import os
 import re
+import uuid
 import xml.etree.ElementTree as ET
 from datetime import datetime
-import logging
-import uuid
 
-from flask import Flask, render_template, jsonify
+from flask import Flask, jsonify, render_template, request
 from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
+from datetime import datetime, timedelta
 
-# Setup logging
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
+app = Flask(__name__)
+CORS(app)
 
 basedir = os.path.abspath(os.path.dirname(__file__))
-
-# Initialize Flask app
-app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///momo_transactions.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'momo_transactions.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# Define Transaction model
+# --- Model ---
 class Transaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    transaction_id = db.Column(db.String(50), unique=True, nullable=True)  # Changed to nullable=True
+    transaction_id = db.Column(db.String(50), unique=False)
     date = db.Column(db.DateTime, nullable=False)
     type = db.Column(db.String(50), nullable=False)
     amount = db.Column(db.Integer, nullable=False)
-    balance = db.Column(db.Integer, nullable=False)
-    fee = db.Column(db.Integer, nullable=False)
-    sender = db.Column(db.String(100), nullable=False)
-    recipient = db.Column(db.String(100), nullable=False)
+    fee = db.Column(db.Integer)
+    sender = db.Column(db.String(100))
+    recipient = db.Column(db.String(100))
 
-def parse_date(date_str):
-    try:
-        return datetime.strptime(date_str, '%d %b %Y %I:%M:%S %p')
-    except ValueError:
-        logger.error(f"Date parsing error for date: {date_str}")
-        return None
+# --- Helpers ---
+def extract_type(body):
+    body = body.lower()
+    if ("bundle" in body or 
+        "bundles" in body or 
+        "bundles and packs" in body or 
+        "data bundle" in body or 
+        "umaze kugura" in body):
+        return "Internet and Voice Bundle"
+    if "deposit" in body: return "Bank Deposit"
+    if "cash power" in body: return "Cash Power"
+    if "withdrawn" in body: return "Withdrawal from Agent"
+    if "airtime" in body: return "Airtime Bill"
+    if "payment" in body: return "Payment to Code"
+    if "transferred" in body: return "Transfer To Mobile Number"
+    if "received" in body: return "Incoming Money"
+    if "transaction" in body: return "Transaction Initiated by Third Party"
+    if ("one time password" in body or
+        "otp" in body or 
+        "be vigilant" in body): return "OTP Message"
+    return "Other"
 
-def parse_amount(amount_str):
-    try:
-        return int(amount_str.replace(',', '').strip())
-    except (ValueError, AttributeError):
-        return 0
-
-def parse_transaction_type(body):
-    body_lower = body.lower()
-    if "received" in body_lower or "bank deposit" in body_lower or "cash deposit" in body_lower:
-        return "deposit"
-    elif "payment" in body_lower:
-        return "payment"
-    elif "transferred to" in body_lower:
-        return "transfer"
-    return "other"
-
-def generate_fallback_transaction_id():
-    return f"GEN-{str(uuid.uuid4())[:8]}"
-
-def parse_xml_to_db():
-    xml_path = os.path.join(basedir, 'data', 'transactions.xml')
+def parse_xml():
+    xml_path = os.path.join(basedir, "data", "transactions.xml")
     if not os.path.exists(xml_path):
-        logger.error(f"Error: XML file not found at {xml_path}")
+        print("XML file not found.")
         return
 
-    logger.debug(f"Parsing XML file from: {xml_path}")
+    db.drop_all()
+    db.create_all()
 
-    try:
-        tree = ET.parse(xml_path)
-        root = tree.getroot()
-    except ET.ParseError as e:
-        logger.error(f"XML ParseError: {e}")
-        return
+    tree = ET.parse(xml_path)
+    root = tree.getroot()
 
-    for sms in root.findall('sms'):
+    for sms in root.findall("sms"):
+        body = sms.get("body")
+        readable_date = sms.get("readable_date")
         try:
-            body = sms.get('body')
-            date_str = sms.get('readable_date')
-            date = parse_date(date_str)
-            
-            if not date:
-                logger.error(f"Skipping SMS due to invalid date: {date_str}")
-                continue
-
-            txn_id_match = re.search(r'TxId:?[\s*]*(\d+)', body)
-            amount_match = re.search(r'(\d+,?\d*)\s*RWF', body)
-            balance_match = re.search(r'new balance:?[\s*]*(\d+,?\d*)\s*RWF', body, re.IGNORECASE)
-            fee_match = re.search(r'Fee\s*was:?[\s*]*(\d+,?\d*)\s*RWF', body, re.IGNORECASE)
-            sender_match = re.search(r'from\s+(.*?)(?:\s*\(\*+|\son)', body, re.IGNORECASE)
-            recipient_match = re.search(r'to\s+(.*?)(?:\s*\d+|\sat)', body, re.IGNORECASE)
-
-            # Generate a transaction ID if none is found
-            transaction_id = txn_id_match.group(1) if txn_id_match else generate_fallback_transaction_id()
-            
-            transaction = Transaction(
-                transaction_id=transaction_id,
-                date=date,
-                type=parse_transaction_type(body),
-                amount=parse_amount(amount_match.group(1)) if amount_match else 0,
-                balance=parse_amount(balance_match.group(1)) if balance_match else 0,
-                fee=parse_amount(fee_match.group(1)) if fee_match else 0,
-                sender=sender_match.group(1).strip() if sender_match else 'Unknown',
-                recipient=recipient_match.group(1).strip() if recipient_match else 'Unknown'
-            )
-
-            db.session.add(transaction)
-            logger.debug(f"Added transaction: {transaction.transaction_id}")
-        except Exception as e:
-            logger.error(f"Error processing SMS: {e}")
+            date = datetime.strptime(readable_date, "%d %b %Y %I:%M:%S %p")
+        except:
             continue
 
-    try:
-        db.session.commit()
-        logger.info("Successfully committed transactions to database")
-    except Exception as e:
-        logger.error(f"Error committing to database: {e}")
-        db.session.rollback()
+        # TransactionId extraction
+        txn_id_match = re.search(r'TxId[:\s]*([\d]+)', body)
+        transaction_id = txn_id_match.group(1).strip() if txn_id_match else "-"
 
+        # amount_match = re.search(r'(\d[\d,]*)\s*RWF', body)
+        # amount = int(amount_match.group(1).replace(',', '')) if amount_match else 0
+        # To include the one deposit with amount starting with RWF
+        amount_match = re.search(r'(?:RWF\s*(\d[\d,]*)|(\d[\d,]*)\s*RWF)', body)
+        if amount_match:
+            amount_str = amount_match.group(1) or amount_match.group(2)
+            amount = int(amount_str.replace(',', ''))
+        else:
+            amount = 0
+
+        fee_match = re.search(r'Fee\s*(?:was|paid)?\s*:?\s*([\d,]+)\s*RWF', body, re.IGNORECASE)
+        fee = int(fee_match.group(1).replace(',', '')) if fee_match and fee_match.group(1).strip() else 0
+
+        sender_match = re.search(r'from\s+(.+?)\s', body, re.IGNORECASE)
+        recipient_match = re.search(r'to\s+(.+?)\s', body, re.IGNORECASE)
+
+        tx = Transaction(
+            transaction_id=transaction_id,
+            date=date,
+            type=extract_type(body),
+            amount=amount,
+            fee=fee,
+            sender=sender_match.group(1).strip() if sender_match else "Unknown",
+            recipient=recipient_match.group(1).strip() if recipient_match else "Unknown"
+        )
+        db.session.add(tx)
+
+    db.session.commit()
+    print("XML parsed and saved to database.")
+
+# --- Routes ---
 @app.route('/')
 def index():
     return render_template('index.html')
 
-@app.route('/test')
-def test():
-    return "Test route works!"
-
-@app.errorhandler(404)
-def not_found(error):
-    return jsonify({"error": "Not found"}), 404
-
-@app.route('/api/dashboard-data', methods=['GET'])
-@app.route('/api/dashboard-data/', methods=['GET'])
+@app.route('/api/dashboard-data')
 def dashboard_data():
-    transactions = Transaction.query.all()
+    from_date = request.args.get("from_date")
+    to_date = request.args.get("to_date")
+    tx_type = request.args.get("transaction_type")
 
-    total_transactions = len(transactions)
-    total_amount = sum(tx.amount for tx in transactions)
-    type_distribution = {}
-    recent_transactions = []
+    print("Filters:", from_date, to_date, tx_type)
+
+    query = Transaction.query
+
+    from datetime import datetime, timedelta
+
+    if from_date:
+        query = query.filter(Transaction.date >= datetime.strptime(from_date, "%Y-%m-%d"))
+    if to_date:
+        to_dt = datetime.strptime(to_date, "%Y-%m-%d") + timedelta(days=1)
+        query = query.filter(Transaction.date < to_dt)
+
+    if tx_type and tx_type.lower() != "all":
+        query = query.filter(db.func.lower(Transaction.type) == tx_type.lower())
+
+    transactions = query.order_by(Transaction.date.desc()).all()
+    type_dist = {}
+    recent = []
 
     for tx in transactions:
-        type_distribution[tx.type] = type_distribution.get(tx.type, 0) + 1
-        recent_transactions.append({
+        type_dist[tx.type] = type_dist.get(tx.type, 0) + 1
+        recent.append({
             "id": tx.id,
+            "transaction_id": tx.transaction_id,
             "recipient": tx.recipient,
             "type": tx.type,
             "amount": tx.amount,
-            "status": "completed"
+            "date": tx.date.strftime("%Y-%m-%d %H:%M"),
+            "fee": tx.fee
+            
         })
 
     return jsonify({
-        "totalTransactions": total_transactions,
-        "totalAmount": total_amount,
-        "typeDistribution": type_distribution,
-        "recentTransactions": recent_transactions
+        "totalTransactions": len(transactions),
+        "totalAmount": sum(tx.amount for tx in transactions),
+        "typeDistribution": type_dist,
+        "recentTransactions": recent[:10]
     })
 
+@app.route('/transactions')
+def all_transactions():
+    transactions = Transaction.query.order_by(Transaction.date.desc()).all()
+    result = []
+    for tx in transactions:
+        result.append({
+            "id": tx.id,
+            "transaction_id": tx.transaction_id,
+            "date": tx.date.strftime("%Y-%m-%d %H:%M"),
+            "type": tx.type,
+            "amount": tx.amount,
+            "fee": tx.fee,
+            "sender": tx.sender,
+            "recipient": tx.recipient
+        })
+    return jsonify(result)
+
+# --- Main ---
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()
-        parse_xml_to_db()
-        logger.info("App finished execution")
-        app.run(debug=True)
+        parse_xml()
+    app.run(debug=True)

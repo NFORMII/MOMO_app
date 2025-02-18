@@ -13,11 +13,9 @@ This project automates the extraction, categorization, and visualization of MTN 
 ## Dashboard Features  
 The web-based dashboard provides an interface for visualizing and interacting with transaction data. It includes:  
 
-- **Dashboard Overview** – Displays total transactions, total amount processed, and active users.  
-- **Transaction Trends** – Line graph showing transaction volume over time.  
 - **Transaction Types Analysis** – Bar chart displaying the distribution of transaction types.  
 - **Recent Transactions Table** – A searchable and sortable table listing the latest transactions with details.  
-- **Customizable Timeframes** – Users can view analytics for different time periods such as weekly or monthly.  
+- **Customizable Timeframes** – Users can view analytics for different time periods by filtering.  
 
 ## Tech Stack  
 | Component  | Technology Used  |  
@@ -66,7 +64,7 @@ bash
 Copy
 Edit
 cd MOMO_app
-python app.py
+python app.py (Makee sure you have flask installed)
 Launch the Frontend
 Open index.html in a web browser.
 
@@ -80,3 +78,5 @@ Optimizing database queries for real-time transaction retrieval.
 Team Members
 David Muotoh-Francis – Frontend Development
 Nformi & Josue – Backend and Data Processing
+
+Demo Video: https://drive.google.com/file/d/1nuomSYfo3rf3J7jN3VNN_F4cf7hL8fRo/view?usp=sharing
